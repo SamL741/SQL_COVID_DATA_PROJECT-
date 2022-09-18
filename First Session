@@ -55,10 +55,9 @@ FROM [Portfolio Project]..['Covid Deaths$']
 where Continent is not Null
 order by 1,2
  
---PERCENT OF POPULATION VACCINATED
- SELECT deaths.continent, deaths.location, deaths.date, deaths.population, vax.new_vaccinations
-, SUM(CONVERT(int,vax.new_vaccinations)) OVER (Partition by deaths.Location Order by deaths.location, deaths.Date) as RollingAVPeopleVaccinated
---, (RollingPeopleVaccinated/population)*100
+--ROLLING PERCENT OF POPULATION VACCINATED
+ SELECT deaths.continent, deaths.location, deaths.date, deaths.population, vax.new_vaccinations, 
+ SUM(CONVERT(int,vax.new_vaccinations)) OVER (Partition by deaths.Location Order by deaths.location, deaths.Date) as RollingAVPeopleVaccinated, (RollingAVPeopleVaccinated/population)*100
 From PortfolioProject..CovidDeaths deaths
 Join PortfolioProject..CovidVaccinations vax
 	On deaths.location = vax.location
@@ -67,7 +66,48 @@ where deaths.continent is not null
 order by 2,3
  
  
+--TOTOAL PERCENT OF PEOPLE VACCINATED
+WITH PopvsVac (Continent, Location, Date, Population, New_Vaccinations, RollingAVPeopleVaccinated)
+as
+(
+ SELECT deaths.continent, deaths.location, deaths.date, deaths.population, vax.new_vaccinations, 
+ SUM(CONVERT(int,vax.new_vaccinations)) OVER (Partition by deaths.Location Order by deaths.location, deaths.Date) as RollingAVPeopleVaccinated, (RollingPeopleVaccinated/population)*100
+From PortfolioProject..CovidDeaths deaths
+Join PortfolioProject..CovidVaccinations vax
+	On deaths.location = vax.location
+	and deaths.date = vax.date
+where deaths.continent is not null 
+order by 2,3
+(
+SELECT *, (RollingAVPeopleVaccinated/Population)*100
+From PopvsVac
  
  
- 
- 
+ -- Using Temp Table to perform Calculation on Partition By in previous query
+
+
+CREATE Table #PercentPopulationVaccinated
+(
+Continent nvarchar(255),
+Location nvarchar(255),
+Date datetime,
+Population numeric,
+New_vaccinations numeric,
+RollingPeopleVaccinated numeric
+)
+
+INSERT INTO #PercentPopulationVaccinated
+WITH PopvsVac (Continent, Location, Date, Population, New_Vaccinations, RollingAVPeopleVaccinated)
+as
+(
+ SELECT deaths.continent, deaths.location, deaths.date, deaths.population, vax.new_vaccinations, 
+ SUM(CONVERT(int,vax.new_vaccinations)) OVER (Partition by deaths.Location Order by deaths.location, deaths.Date) as RollingAVPeopleVaccinated, (RollingPeopleVaccinated/population)*100
+FROM PortfolioProject..CovidDeaths deaths
+JOIN PortfolioProject..CovidVaccinations vax
+	On deaths.location = vax.location
+	and deaths.date = vax.date
+where deaths.continent is not null 
+order by 2,3
+(
+SELECT *, (RollingAVPeopleVaccinated/Population)*100
+From PopvsVac
