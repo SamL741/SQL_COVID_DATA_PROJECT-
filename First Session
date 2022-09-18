@@ -24,7 +24,6 @@ Where location like'%ireland%'
 ORDER BY 1,2
 
 
-
 --COUNTRIES WITH THE HIGHEST INFECTION RATES
 Select Location, Population, max(cast(total_deaths as int)) as HighestDeathCount,  Max((total_cases/population))*100 as PercentPopulationInfected
 FROM [Portfolio Project]..['Covid Deaths$']
@@ -37,6 +36,38 @@ order by PercentPopulationInfected desc
 Select Location, Population, max(cast(total_deaths as int)) as HighestDeathCount
 FROM [Portfolio Project]..['Covid Deaths$']
 WHERE Continent is not null
-Group by Location, Population
+Group by Location
 order by HighestDeathCount desc
+ 
+ 
+--DEATH RATE BY CONTINENT
+Select continent, MAX(cast(Total_deaths as int)) as TotalDeathCount
+From PortfolioProject..CovidDeaths
+--Where location like '%states%'
+Where continent is not null 
+Group by continent
+order by TotalDeathCount desc
+
+
+--GLOBAL COVID DEATH RATE
+ SELECT SUM(new_Cases) as total_cases, SUM(cast(new_deaths as bigint)) as total_deaths, SUM(cast(new_deaths as bigint))/SUM(new_cases)*100 as DeathPercentage
+FROM [Portfolio Project]..['Covid Deaths$']
+where Continent is not Null
+order by 1,2
+ 
+--PERCENT OF POPULATION VACCINATED
+ SELECT deaths.continent, deaths.location, deaths.date, deaths.population, vax.new_vaccinations
+, SUM(CONVERT(int,vax.new_vaccinations)) OVER (Partition by deaths.Location Order by deaths.location, deaths.Date) as RollingAVPeopleVaccinated
+--, (RollingPeopleVaccinated/population)*100
+From PortfolioProject..CovidDeaths deaths
+Join PortfolioProject..CovidVaccinations vax
+	On deaths.location = vax.location
+	and deaths.date = vax.date
+where deaths.continent is not null 
+order by 2,3
+ 
+ 
+ 
+ 
+ 
  
